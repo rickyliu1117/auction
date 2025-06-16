@@ -1,8 +1,23 @@
-This auction smart contract was completely created by AI, including the unit test code.
 
+# Auction Smart Contract
 
-How to compile and test:
+## Features
+- Smart contract for managing auctions
+- Support for bidding and withdrawals
+- Time-based auction periods
+- Event emission for tracking changes
 
-npm install --save-dev hardhat\
-npx hardhat compile\
+## Installation
+```bash
+npm install --save-dev hardhat
+```
+
+## Testing
+```bash
 npx hardhat test
+```
+
+## Compilation
+```bash
+npx hardhat compile
+```
