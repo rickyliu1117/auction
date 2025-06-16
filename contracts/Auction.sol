@@ -3,9 +3,9 @@ pragma solidity ^0.8.0;
 
 contract Auction {
     // Auction details
-    address public owner;
-    uint public startTime;
-    uint public endTime;
+    address public immutable owner;  // Make owner immutable
+    uint public immutable startTime; // Make startTime immutable
+    uint public immutable endTime;   // Make endTime immutable
     uint public highestBid;
     address public highestBidder;
     bool public ended;
@@ -14,20 +14,20 @@ contract Auction {
     mapping(address => uint) public bids;
     
     // Events
-    event BidPlaced(address bidder, uint amount);
-    event AuctionEnded(address winner, uint amount);
-    event WithdrawalSuccessful(address recipient, uint amount);
+    event BidPlaced(address indexed bidder, uint amount);  // Add indexed for better filtering
+    event AuctionEnded(address indexed winner, uint amount);
+    event WithdrawalSuccessful(address indexed recipient, uint amount);
     
     // Modifiers
     modifier onlyOwner() {
-        require(msg.sender == owner, "Only owner can call this function");
+        if (msg.sender != owner) revert("Only owner can call this function");
         _;
     }
     
     modifier auctionActive() {
-        require(block.timestamp >= startTime, "Auction hasn't started yet");
-        require(block.timestamp <= endTime, "Auction has ended");
-        require(!ended, "Auction has been ended");
+        if (block.timestamp < startTime) revert("Auction hasn't started yet");
+        if (block.timestamp > endTime) revert("Auction has ended");
+        if (ended) revert("Auction has been ended");
         _;
     }
     
@@ -36,13 +36,11 @@ contract Auction {
         owner = msg.sender;
         startTime = block.timestamp;
         endTime = startTime + _biddingTime;
-        highestBid = 0;
-        ended = false;
     }
     
     // Function to place a bid
-    function placeBid() public payable auctionActive {
-        require(msg.value > highestBid, "Bid must be higher than current highest bid");
+    function placeBid() external payable auctionActive {  // Changed to external for gas optimization
+        if (msg.value <= highestBid) revert("Bid must be higher than current highest bid");
         
         // Return the previous highest bidder's bid
         if (highestBidder != address(0)) {
@@ -56,30 +54,32 @@ contract Auction {
     }
     
     // Function to end the auction
-    function endAuction() public onlyOwner {
-        require(block.timestamp > endTime, "Auction hasn't ended yet");
-        require(!ended, "Auction has already been ended");
+    function endAuction() external onlyOwner {  // Changed to external
+        if (block.timestamp <= endTime) revert("Auction hasn't ended yet");
+        if (ended) revert("Auction has already been ended");
         
         ended = true;
         emit AuctionEnded(highestBidder, highestBid);
         
         // Transfer the highest bid to the owner
-        payable(owner).transfer(highestBid);
+        (bool success, ) = payable(owner).call{value: highestBid}("");  // Use call instead of transfer
+        if (!success) revert("Transfer failed");
     }
     
     // Function for bidders to withdraw their bids
-    function withdraw() public {
+    function withdraw() external {  // Changed to external
         uint amount = bids[msg.sender];
-        require(amount > 0, "No funds to withdraw");
+        if (amount == 0) revert("No funds to withdraw");
         
         bids[msg.sender] = 0;
-        payable(msg.sender).transfer(amount);
+        (bool success, ) = payable(msg.sender).call{value: amount}("");  // Use call instead of transfer
+        if (!success) revert("Transfer failed");
         
         emit WithdrawalSuccessful(msg.sender, amount);
     }
     
     // Function to get auction status
-    function getAuctionStatus() public view returns (
+    function getAuctionStatus() external view returns (  // Changed to external
         uint _startTime,
         uint _endTime,
         uint _highestBid,
@@ -90,10 +90,7 @@ contract Auction {
     }
     
     // Function to get remaining time
-    function getRemainingTime() public view returns (uint) {
-        if (block.timestamp >= endTime) {
-            return 0;
-        }
-        return endTime - block.timestamp;
+    function getRemainingTime() external view returns (uint) {  // Changed to external
+        return block.timestamp >= endTime ? 0 : endTime - block.timestamp;  // Use ternary operator
     }
 } 
