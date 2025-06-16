@@ -1,27 +1,34 @@
 # Auction Smart Contract
-## Features
-- Smart contract for managing auctions
-- Support for bidding and withdrawals
-- Time-based auction periods
-- Event emission for tracking changes
 
-## Installation
-```bash
-npm install --save-dev hardhat
-```
+## Overview
+This project implements a secure and gas-optimized auction smart contract on the Ethereum blockchain. The contract allows users to place bids, withdraw funds, and end the auction after a specified bidding time.
+
+## Features
+- Secure bidding mechanism
+- Reentrancy protection
+- Pause/unpause functionality
+- Gas-optimized operations
+- Comprehensive test suite
+
+## Contract Address
+- **Sepolia Network:** [0x5180711DA75B60e70Fe16baF36e74990377f4348](https://sepolia.etherscan.io/address/0x5180711DA75B60e70Fe16baF36e74990377f4348#code)
+
+## Development
+- **Solidity Version:** 0.8.20
+- **Hardhat:** Used for development, testing, and deployment
+- **OpenZeppelin:** Utilized for security best practices
 
 ## Testing
+Run the test suite with:
 ```bash
 npx hardhat test
 ```
 
-## Compilation
+## Deployment
+Deploy to Sepolia with:
 ```bash
-npx hardhat compile
+npx hardhat run scripts/deploy.js --network sepolia
 ```
 
-## Sepolia Deployment
-
-The Auction contract is deployed on Sepolia at address: `0x5741215DE80E16F779866d8C0f1b5561F9C3be47`.
-
-You can interact with the contract using the test script `scripts/testDeployed.js`. This script demonstrates placing bids, withdrawing funds, and ending the auction.
+## License
+MIT

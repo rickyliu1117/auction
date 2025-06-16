@@ -1,97 +1,79 @@
 require("dotenv").config();
-const { ethers } = require("ethers");
+const { ethers } = require("hardhat");
 
 async function main() {
-    // Load environment variables
-    const contractAddress = "0x5741215DE80E16F779866d8C0f1b5561F9C3be47";
-    const provider = new ethers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL);
-    const owner = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+    console.log("Testing deployed Auction contract...");
+
+    // Updated contract address
+    const contractAddress = "0x5180711DA75B60e70Fe16baF36e74990377f4348";
+
+    // Load private keys from environment variables
+    const ownerKey = process.env.OWNER_PRIVATE_KEY;
+    const bidder1Key = process.env.BIDDER1_PRIVATE_KEY;
     const bidder2Key = process.env.BIDDER2_PRIVATE_KEY;
-    const bidder2 = bidder2Key ? new ethers.Wallet(bidder2Key, provider) : null;
+    const rpcUrl = process.env.SEPOLIA_RPC_URL;
 
-    // Get contract ABI (from artifacts)
-    const fs = require("fs");
-    const artifact = JSON.parse(fs.readFileSync("artifacts/contracts/Auction.sol/Auction.json", "utf8"));
-    const auctionOwner = new ethers.Contract(contractAddress, artifact.abi, owner);
-    const auctionBidder2 = bidder2 ? new ethers.Contract(contractAddress, artifact.abi, bidder2) : null;
+    if (!ownerKey || !bidder1Key || !bidder2Key || !rpcUrl) {
+        throw new Error("Please set OWNER_PRIVATE_KEY, BIDDER1_PRIVATE_KEY, BIDDER2_PRIVATE_KEY, and SEPOLIA_RPC_URL in your .env file");
+    }
 
-    console.log("\nTesting deployed Auction contract...");
+    // Create provider and signers
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const owner = new ethers.Wallet(ownerKey, provider);
+    const bidder1 = new ethers.Wallet(bidder1Key, provider);
+    const bidder2 = new ethers.Wallet(bidder2Key, provider);
+
     console.log("Contract address:", contractAddress);
     console.log("Owner address:", owner.address);
-    if (bidder2) console.log("Bidder2 address:", bidder2.address);
+    console.log("Bidder1 address:", bidder1.address);
+    console.log("Bidder2 address:", bidder2.address);
 
-    // Get initial auction status
+    // Attach to the deployed contract
+    const Auction = await ethers.getContractFactory("Auction", owner);
+    const auction = await Auction.attach(contractAddress);
+
+    // Log initial auction status
     console.log("\nInitial Auction Status:");
-    const initialStatus = await auctionOwner.getAuctionStatus();
-    console.log("Start Time:", new Date(Number(initialStatus[0]) * 1000).toLocaleString());
-    console.log("End Time:", new Date(Number(initialStatus[1]) * 1000).toLocaleString());
-    console.log("Highest Bid:", ethers.formatEther(initialStatus[2]), "ETH");
-    console.log("Highest Bidder:", initialStatus[3]);
-    console.log("Ended:", initialStatus[4]);
+    const status = await auction.getAuctionStatus();
+    console.log("Start Time:", status[0].toString());
+    console.log("End Time:", status[1].toString());
+    console.log("Highest Bid:", ethers.formatEther(status[2]));
+    console.log("Highest Bidder:", status[3]);
+    console.log("Ended:", status[4]);
+    console.log("Paused:", status[5]);
 
-    // Place a bid from the owner (for demonstration)
-    // console.log("\nPlacing a bid (0.1 ETH) from Owner...");
-    // const bidTx = await auctionOwner.placeBid({ value: ethers.parseEther("0.1") });
-    // await bidTx.wait();
-    // console.log("Bid placed successfully!");
+    // Place a bid from bidder1
+    console.log("\nPlacing bid from Bidder1...");
+    const auctionBidder1 = auction.connect(bidder1);
+    const bidAmount1 = ethers.parseEther("0.1");
+    const bidder1BalanceBefore = await provider.getBalance(bidder1.address);
+    await auctionBidder1.placeBid({ value: bidAmount1 });
+    const bidder1BalanceAfter = await provider.getBalance(bidder1.address);
+    console.log("Bidder1 Balance Before Bid:", ethers.formatEther(bidder1BalanceBefore), "ETH");
+    console.log("Bidder1 Balance After Bid:", ethers.formatEther(bidder1BalanceAfter), "ETH");
+    console.log("Bid placed successfully!");
 
-    // Place a bid from bidder2 (if available)
-    if (auctionBidder2) {
-        console.log("\nPlacing a bid (0.2 ETH) from Bidder2...");
-        const bid2Tx = await auctionBidder2.placeBid({ value: ethers.parseEther("0.2") });
-        await bid2Tx.wait();
-        console.log("Bid placed successfully!");
-    } else {
-        console.log("\nNo BIDDER2_PRIVATE_KEY found in .env, skipping bidder2 bid test.");
-    }
+    // Place a higher bid from bidder2
+    console.log("\nPlacing higher bid from Bidder2...");
+    const auctionBidder2 = auction.connect(bidder2);
+    const bidAmount2 = ethers.parseEther("0.15");
+    await auctionBidder2.placeBid({ value: bidAmount2 });
+    console.log("Higher bid placed successfully!");
 
-    // Get updated auction status
+    // Log updated auction status
     console.log("\nUpdated Auction Status:");
-    const updatedStatus = await auctionOwner.getAuctionStatus();
-    console.log("Highest Bid:", ethers.formatEther(updatedStatus[2]), "ETH");
+    const updatedStatus = await auction.getAuctionStatus();
+    console.log("Highest Bid:", ethers.formatEther(updatedStatus[2]));
     console.log("Highest Bidder:", updatedStatus[3]);
 
-    // Withdraw from owner (should have funds if outbid)
-    console.log("\nAttempting withdrawal from Owner (should succeed if outbid)...");
-    try {
-        const withdrawTx = await auctionOwner.withdraw();
-        await withdrawTx.wait();
-        console.log("Withdrawal successful!");
-    } catch (e) {
-        console.log("Withdrawal failed (likely not outbid):", e.message);
-    }
+    // Withdraw funds from bidder1
+    console.log("\nWithdrawing funds from Bidder1...");
+    await auctionBidder1.withdraw();
+    console.log("Withdrawal successful!");
 
-    // Fast-forward time to after auction end (if local, not possible on Sepolia)
-    // Instead, attempt to end the auction (will only succeed if auction ended)
-    console.log("\nAttempting to end the auction as Owner...");
-    try {
-        const endTx = await auctionOwner.endAuction();
-        await endTx.wait();
-        console.log("Auction ended successfully!");
-    } catch (e) {
-        console.log("End auction failed (likely not ended yet):", e.message);
-    }
-
-    // Attempt to place a late bid (should fail if auction ended)
-    if (auctionBidder2) {
-        console.log("\nAttempting to place a late bid from Bidder2...");
-        try {
-            const lateBidTx = await auctionBidder2.placeBid({ value: ethers.parseEther("0.3") });
-            await lateBidTx.wait();
-            console.log("Late bid placed (unexpected, auction may not be ended)");
-        } catch (e) {
-            console.log("Late bid failed as expected:", e.message);
-        }
-    }
-
-    // Get final auction status
-    const finalStatus = await auctionOwner.getAuctionStatus();
-    console.log("\nFinal Auction Status:");
-    console.log("Highest Bid:", ethers.formatEther(finalStatus[2]), "ETH");
-    console.log("Highest Bidder:", finalStatus[3]);
-    console.log("Ended:", finalStatus[4]);
-
-    console.log("\nExtended tests completed!");
+    // Log remaining time
+    const remainingTime = await auction.getRemainingTime();
+    console.log("\nRemaining Time:", remainingTime.toString(), "seconds");
 }
 
 main()
