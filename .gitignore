@@ -1,0 +1,24 @@
+# Node modules
+node_modules/
+
+# Hardhat artifacts and cache
+artifacts/
+cache/
+
+# Hardhat log files
+*.log
+
+# dotenv environment variables
+.env
+
+# OS generated files
+.DS_Store
+
+# VSCode settings
+.vscode/
+
+# Coverage output
+coverage/
+
+# npm debug log
+npm-debug.log* 

@@ -1,0 +1,14 @@
+{
+  "name": "auction-contract",
+  "version": "1.0.0",
+  "description": "Auction smart contract",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test"
+  },
+  "dependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "hardhat": "^2.19.0"
+  }
+} 
