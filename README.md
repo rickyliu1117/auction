@@ -3,6 +3,6 @@ This auction smart contract was completely created by AI, including the unit tes
 
 How to compile and test:
 
-npm install --save-dev hardhat
-npx hardhat compile
+npm install --save-dev hardhat\
+npx hardhat compile\
 npx hardhat test
