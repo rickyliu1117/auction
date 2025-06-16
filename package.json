@@ -7,7 +7,7 @@
     "compile": "hardhat compile",
     "test": "hardhat test"
   },
-  "dependencies": {
+  "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^4.0.0",
     "hardhat": "^2.19.0"
   }
